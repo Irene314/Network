@@ -2,7 +2,9 @@ package tw.yulinlin.network;
 
 import androidx.fragment.app.FragmentActivity;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -12,6 +14,7 @@ import android.widget.AdapterView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -19,7 +22,10 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.ui.IconGenerator;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -115,26 +121,74 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         void parseJSONArray() {
             try {
                 JSONArray jsonArray = new JSONArray(resultString);
+                LatLngBounds.Builder builder = new LatLngBounds.Builder();
+
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject site = jsonArray.getJSONObject(i);
                     LatLng site_coordinate =
                             new LatLng(site.getDouble("site_latitude"),
-                                       site.getDouble("site_longitude"));
-                    if(i%4==0)
-                        mMap.addMarker(new MarkerOptions().position(site_coordinate).
-                            title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
-                    else if(i%4==1)
-                        mMap.addMarker(new MarkerOptions().position(site_coordinate).
-                            title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)));
-                    else if(i%4==2)
-                        mMap.addMarker(new MarkerOptions().position(site_coordinate).
-                            title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-                    else
-                        mMap.addMarker(new MarkerOptions().position(site_coordinate).
-                            title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                                    site.getDouble("site_longitude"));
+                    if (site.getString("site_area").equals("宜蘭縣")) {
+                        builder.include(site_coordinate);
+                        if (i % 4 == 0)
+                            mMap.addMarker(new MarkerOptions().position(site_coordinate).
+                                    title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)));
+                        else if (i % 4 == 1)
+                            mMap.addMarker(new MarkerOptions().position(site_coordinate).
+                                    title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)));
+                        else if (i % 4 == 2)
+                            mMap.addMarker(new MarkerOptions().position(site_coordinate).
+                                    title(site.getString("site_name")).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                        else
+                        {
+                            IconGenerator iconFactory = new IconGenerator(MapsActivity.this);
+
+                            iconFactory.setStyle(IconGenerator.STYLE_ORANGE);
+
+                            MarkerOptions newMarker = new MarkerOptions().
+                                    title(site.getString("site_name")).
+                                    icon(BitmapDescriptorFactory.fromBitmap(iconFactory.makeIcon(site.getString("site_name")))).
+                                    position(site_coordinate).
+                                    anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV());
+                            mMap.addMarker(newMarker);
+                        }
+
+                    }
                 }
-                LatLng center=new LatLng(24.816592206558344, 121.72374909853566);
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(center,13));
+
+                int padding = 50; // offset from edges of the map in pixels
+                LatLngBounds bounds = builder.build();
+                CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+                mMap.animateCamera(cu);
+
+                mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                    @Override
+                    public boolean onMarkerClick(Marker marker) {
+                        AlertDialog.Builder alert = new AlertDialog.Builder(MapsActivity.this);
+                        alert.setTitle(marker.getTitle());
+                        alert.setMessage(marker.getPosition().toString());
+                        alert.setPositiveButton("Positive", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                            }
+                        });
+                        alert.setNegativeButton("Negative", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                            }
+                        });
+                        alert.setNeutralButton("Neutral", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+
+                            }
+                        });
+                        alert.show();
+                        return true;
+                    }
+                });
 
             } catch (JSONException e) {
                 e.printStackTrace();
